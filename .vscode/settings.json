@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.vpy": "python",
+        "atomic": "c",
+        "system_error": "c",
+        "*.inc": "c"
+    }
+}
