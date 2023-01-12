@@ -35,6 +35,9 @@ struct channel_tls_t {
 
 #endif /* defined(CHANNEL_OBJECT_PRIVATE) */
 
+// ipid: 调试函数
+void ipid_log_receive_cell(or_connection_t *conn, uint8_t command, int payload_len);
+
 channel_t * channel_tls_connect(const tor_addr_t *addr, uint16_t port,
                                 const char *id_digest,
                                 const struct ed25519_public_key_t *ed_id);

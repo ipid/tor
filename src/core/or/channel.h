@@ -507,6 +507,9 @@ struct channel_listener_t {
   uint64_t n_accepted;
 };
 
+// ipid：调试函数
+void ipid_log_channel_write_cell(channel_t *chan, uint8_t command, int payload_len);
+
 /* Channel state manipulations */
 
 int channel_state_is_valid(channel_state_t state);

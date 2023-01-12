@@ -615,6 +615,14 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
                                size_t payload_len, crypt_path_t *cpath_layer,
                                const char *filename, int lineno))
 {
+  // log_notice(LD_GENERAL, 
+  //   "[ipid] relay_send_command_from_edge_: streamId = %d, circ->n_circ_id = %d, command = %s, payload_len = %d",
+  //   (int)stream_id,
+  //   (int)circ->n_circ_id,
+  //   relay_command_to_string(relay_command),
+  //   (int)payload_len
+  // );
+
   cell_t cell;
   relay_header_t rh;
   cell_direction_t cell_direction;
@@ -737,7 +745,15 @@ int
 connection_edge_send_command(edge_connection_t *fromconn,
                              uint8_t relay_command, const char *payload,
                              size_t payload_len)
-{
+{  
+  // log_notice(LD_GENERAL, 
+  //   "[ipid] connection_edge_send_command: streamId = %d, n_circ_id = %d, command = %s, payload_len = %d",
+  //   (int)fromconn->stream_id,
+  //   (int)fromconn->on_circuit->n_circ_id,
+  //   relay_command_to_string(relay_command),
+  //   (int)payload_len
+  // );
+
   /* XXXX NM Split this function into a separate versions per circuit type? */
   circuit_t *circ;
   crypt_path_t *cpath_layer = fromconn->cpath_layer;

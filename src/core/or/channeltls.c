@@ -1050,6 +1050,24 @@ channel_tls_time_process_cell(cell_t *cell, channel_tls_t *chan, int *time,
 #define PROCESS_CELL(tp, cl, cn) channel_tls_process_ ## tp ## _cell(cl, cn)
 #endif /* defined(KEEP_TIMING_STATS) */
 
+// ipid: 调试函数
+void ipid_log_receive_cell(or_connection_t *conn, uint8_t command, int payload_len) {
+  char buf[200];
+  if (tor_addr_to_str(buf, &conn->canonical_orport.addr, sizeof(buf), 1) == 0) {
+    return;
+  }
+
+  log_notice(
+    LD_CHANNEL,
+    "[ipid] Receive Cell: command = %s, from = %s (%s:%"PRIu16"), len = %d",
+    cell_command_to_string(command),
+    conn->nickname == NULL ? "NULL" : conn->nickname,
+    buf,
+    conn->canonical_orport.port,
+    payload_len
+  );
+}
+
 /**
  * Handle an incoming cell on a channel_tls_t.
  *
@@ -1066,6 +1084,9 @@ channel_tls_time_process_cell(cell_t *cell, channel_tls_t *chan, int *time,
 void
 channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
 {
+  // ipid: 打个日志先
+  ipid_log_receive_cell(conn, cell->command, CELL_PAYLOAD_SIZE);
+
   channel_tls_t *chan;
   int handshaking;
 

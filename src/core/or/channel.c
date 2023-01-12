@@ -84,6 +84,12 @@
 
 #include "core/or/cell_queue_st.h"
 
+// ipid: debug
+#include "core/or/or_connection_st.h"
+
+// ipid: debug
+#include "core/or/command.h"
+
 /* Global lists of channels */
 
 /* All channel_t instances */
@@ -1409,6 +1415,25 @@ channel_clear_remote_end(channel_t *chan)
          sizeof(chan->identity_digest));
 }
 
+void ipid_log_channel_write_cell(channel_t *chan, uint8_t command, int payload_len) {
+  const channel_tls_t *chan_tls = channel_tls_from_base(chan);
+
+  char buf[200];
+  if (tor_addr_to_str(buf, &chan_tls->conn->canonical_orport.addr, sizeof(buf), 1) == 0) {
+    return;
+  }
+
+  log_notice(
+    LD_CHANNEL,
+    "[ipid] Write Cell: command = %s, to = %s (%s:%"PRIu16"), len = %d",
+    cell_command_to_string(command),
+    chan_tls->conn->nickname == NULL ? "NULL" : chan_tls->conn->nickname,
+    buf,
+    chan_tls->conn->canonical_orport.port,
+    payload_len
+  );
+}
+
 /**
  * Write to a channel the given packed cell.
  *
@@ -1422,6 +1447,9 @@ write_packed_cell(channel_t *chan, packed_cell_t *cell)
   int ret = -1;
   size_t cell_bytes;
   uint8_t command = packed_cell_get_command(cell, chan->wide_circ_ids);
+
+  // ipid：调试用
+  ipid_log_channel_write_cell(chan, command, CELL_MAX_NETWORK_SIZE);
 
   tor_assert(chan);
   tor_assert(cell);
