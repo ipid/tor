@@ -623,7 +623,7 @@ void ipid_print_relay_cell_payload_friendly(uint8_t relay_command, const uint8_t
         "\n"
         "    AddrPort: %s\n"
         "    Flags: %#X",
-        payload, flags
+        addrPort, flags
       );
       break;
 
@@ -1706,19 +1706,17 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
                      relay_header_t *rh, int optimistic_data)
 {
   // ipid: 打个日志，此时 Relay Cell 的 Payload 已经解密了，输出收到的 Relay Cell 内容
-  if (rh->length <= CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE) {
-    char formatted_payload[512];
-    ipid_print_relay_cell_payload_friendly(
-      rh->command, cell->payload + RELAY_HEADER_SIZE, rh->length, formatted_payload, sizeof(formatted_payload));
+  char formatted_payload[512];
+  ipid_print_relay_cell_payload_friendly(
+    rh->command, cell->payload + RELAY_HEADER_SIZE, rh->length, formatted_payload, sizeof(formatted_payload));
 
-    log_notice(LD_GENERAL, 
-      "[ipid] 收到一个 Relay Cell: Stream ID = %"PRIu64", Circuit ID = %"PRIu64", 命令 = RELAY_%s, 内容: %s",
-      (uint64_t)rh->stream_id,
-      (uint64_t)circ->n_circ_id,
-      relay_command_to_string(rh->command),
-      formatted_payload
-    );
-  }
+  log_notice(LD_GENERAL, 
+    "[ipid] 收到一个 Relay Cell: Stream ID = %"PRIu64", Circuit ID = %"PRIu64", 命令 = RELAY_%s, 内容: %s",
+    (uint64_t)rh->stream_id,
+    (uint64_t)circ->n_circ_id,
+    relay_command_to_string(rh->command),
+    formatted_payload
+  );
 
   unsigned domain = layer_hint?LD_APP:LD_EXIT;
   int reason;

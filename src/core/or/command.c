@@ -527,16 +527,16 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
       cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id
   ) {
     direction = CELL_DIRECTION_OUT;
-    log_notice(LD_GENERAL,
-      "收到的 Cell 方向为 CELL_DIRECTION_OUT（远离 origin 发送）。CIRCUIT_IS_ORIGIN(circ) = %s",
-      CIRCUIT_IS_ORIGIN(circ) ? "true" : "false"
-    );
+    // log_notice(LD_GENERAL,
+    //   "收到的 Cell 方向为 CELL_DIRECTION_OUT（远离 origin 发送）。CIRCUIT_IS_ORIGIN(circ) = %s",
+    //   CIRCUIT_IS_ORIGIN(circ) ? "true" : "false"
+    // );
   } else {
     direction = CELL_DIRECTION_IN;
-    log_notice(LD_GENERAL,
-      "收到的 Cell 方向为 CELL_DIRECTION_IN（朝着 origin 发送）。CIRCUIT_IS_ORIGIN(circ) = %s",
-      CIRCUIT_IS_ORIGIN(circ) ? "true" : "false"
-    );
+    // log_notice(LD_GENERAL,
+    //   "收到的 Cell 方向为 CELL_DIRECTION_IN（朝着 origin 发送）。CIRCUIT_IS_ORIGIN(circ) = %s",
+    //   CIRCUIT_IS_ORIGIN(circ) ? "true" : "false"
+    // );
   }
 
   /* If we have a relay_early cell, make sure that it's outbound, and we've
