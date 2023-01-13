@@ -28,6 +28,11 @@ size_t cell_queues_get_total_allocation(void);
 
 void relay_header_pack(uint8_t *dest, const relay_header_t *src);
 void relay_header_unpack(relay_header_t *dest, const uint8_t *src);
+
+// ipid: 调试用，把 Relay Cell 的 Payload 中的信息打印成人类可读的字符串
+const char* ipid_onion_handshake_type_to_str(int handshakeType);
+void ipid_print_relay_cell_payload_friendly(uint8_t relay_command, const uint8_t *payload, size_t payload_len, char* buf, size_t nbuf);
+
 MOCK_DECL(int,
 relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
                                uint8_t relay_command, const char *payload,

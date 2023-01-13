@@ -508,7 +508,7 @@ struct channel_listener_t {
 };
 
 // ipid：调试函数
-void ipid_log_channel_write_cell(channel_t *chan, uint8_t command, int payload_len);
+void ipid_log_channel_write_cell(channel_t *chan, circid_t circuit_id, uint8_t command, int payload_len);
 
 /* Channel state manipulations */
 

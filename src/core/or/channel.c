@@ -1415,21 +1415,23 @@ channel_clear_remote_end(channel_t *chan)
          sizeof(chan->identity_digest));
 }
 
-void ipid_log_channel_write_cell(channel_t *chan, uint8_t command, int payload_len) {
+void ipid_log_channel_write_cell(channel_t *chan, circid_t circuit_id, uint8_t command, int payload_len) {
   const channel_tls_t *chan_tls = channel_tls_from_base(chan);
 
-  char buf[200];
+  char buf[128];
   if (tor_addr_to_str(buf, &chan_tls->conn->canonical_orport.addr, sizeof(buf), 1) == 0) {
     return;
   }
 
   log_notice(
     LD_CHANNEL,
-    "[ipid] Write Cell: command = %s, to = %s (%s:%"PRIu16"), len = %d",
+    "[ipid] 发出 Cell: Channel GID = %d, Circuit ID = %"PRIu64", 命令 = CELL_%s, to = %s (%s:%d), 长度 = %d",
+    (int)chan->global_identifier,
+    (uint64_t)circuit_id,
     cell_command_to_string(command),
     chan_tls->conn->nickname == NULL ? "NULL" : chan_tls->conn->nickname,
     buf,
-    chan_tls->conn->canonical_orport.port,
+    (int)chan_tls->conn->canonical_orport.port,
     payload_len
   );
 }
@@ -1448,8 +1450,9 @@ write_packed_cell(channel_t *chan, packed_cell_t *cell)
   size_t cell_bytes;
   uint8_t command = packed_cell_get_command(cell, chan->wide_circ_ids);
 
-  // ipid：调试用
-  ipid_log_channel_write_cell(chan, command, CELL_MAX_NETWORK_SIZE);
+  // ipid：调试用  
+  ipid_log_channel_write_cell(
+    chan, packed_cell_get_circid(cell, chan->wide_circ_ids), command, CELL_MAX_NETWORK_SIZE);
 
   tor_assert(chan);
   tor_assert(cell);

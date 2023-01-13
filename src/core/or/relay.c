@@ -600,6 +600,73 @@ pad_cell_payload(uint8_t *cell_payload, size_t data_len)
                            cell_payload + pad_offset, pad_len);
 }
 
+const char* ipid_onion_handshake_type_to_str(int handshakeType) {
+  switch (handshakeType) {
+    case ONION_HANDSHAKE_TYPE_TAP:     return "TAP";
+    case ONION_HANDSHAKE_TYPE_FAST:    return "FAST";
+    case ONION_HANDSHAKE_TYPE_NTOR:    return "NTOR";
+    case ONION_HANDSHAKE_TYPE_NTOR_V3: return "NTOR_V3";
+    default: return "UNKNOWN";
+  }
+}
+
+// Format a relay cell payload for logging.
+void ipid_print_relay_cell_payload_friendly(uint8_t relay_command, const uint8_t *payload, size_t payload_len, char* buf, size_t nbuf) {
+  switch (relay_command) {
+    case RELAY_COMMAND_BEGIN:
+      const char *addrPort = (const char *)payload;
+      payload += strlen(addrPort) + 1;
+      uint32_t flags = ntohl(get_uint32(payload));
+
+      tor_snprintf(
+        buf, nbuf, 
+        "\n"
+        "    AddrPort: %s\n"
+        "    Flags: %#X",
+        payload, flags
+      );
+      break;
+
+    case RELAY_COMMAND_DATA:
+      tor_snprintf(buf, nbuf, "数据（长 %d 字节）：%.*s", (int)payload_len, (int)payload_len, payload);
+      break;
+
+    case RELAY_COMMAND_EXTEND:
+    case RELAY_COMMAND_EXTEND2:
+      extend_cell_t ec;
+      memset(&ec, 0, sizeof(ec));
+
+      if (extend_cell_parse(&ec, relay_command, payload, payload_len) < 0) {
+        tor_snprintf(buf, nbuf, "<非法 EXTEND Cell>");
+        break;
+      }
+
+      char addr_buf[128];
+      int port;
+
+      if (ec.orport_ipv6.port != 0) {
+        tor_addr_to_str(addr_buf, &ec.orport_ipv6.addr, sizeof(addr_buf), 1);
+        port = ec.orport_ipv6.port;
+      } else {
+        tor_addr_to_str(addr_buf, &ec.orport_ipv4.addr, sizeof(addr_buf), 1);
+        port = ec.orport_ipv4.port;
+      }
+
+      char node_id_buf[128];
+      base16_encode(node_id_buf, sizeof(node_id_buf), (const char *)ec.node_id, DIGEST_LEN);
+      tor_snprintf(
+        buf, nbuf, "\n    地址: %s:%d\n    节点 ID: %s\n    握手类型: %s", 
+        addr_buf, port, node_id_buf,
+        ipid_onion_handshake_type_to_str(ec.create_cell.handshake_type)
+      );
+      break;
+    
+    default:      
+      tor_snprintf(buf, nbuf, "暂不支持");
+      break;
+  }
+}
+
 /** Make a relay cell out of <b>relay_command</b> and <b>payload</b>, and send
  * it onto the open circuit <b>circ</b>. <b>stream_id</b> is the ID on
  * <b>circ</b> for the stream that's sending the relay cell, or 0 if it's a
@@ -615,14 +682,6 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
                                size_t payload_len, crypt_path_t *cpath_layer,
                                const char *filename, int lineno))
 {
-  // log_notice(LD_GENERAL, 
-  //   "[ipid] relay_send_command_from_edge_: streamId = %d, circ->n_circ_id = %d, command = %s, payload_len = %d",
-  //   (int)stream_id,
-  //   (int)circ->n_circ_id,
-  //   relay_command_to_string(relay_command),
-  //   (int)payload_len
-  // );
-
   cell_t cell;
   relay_header_t rh;
   cell_direction_t cell_direction;
@@ -650,6 +709,18 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
   relay_header_pack(cell.payload, &rh);
   if (payload_len)
     memcpy(cell.payload+RELAY_HEADER_SIZE, payload, payload_len);
+
+  // ipid：调试用，此时还没加密，趁机输出我们要发送的 Relay Cell 的内容
+  char formatted_payload[512];
+  ipid_print_relay_cell_payload_friendly(
+    relay_command, (const uint8_t *)payload, payload_len, formatted_payload, sizeof(formatted_payload));
+  log_notice(LD_GENERAL, 
+    "[ipid] 发送一个 Relay Cell: Stream ID = %"PRIu64", Circuit ID = %"PRIu64", 命令 = RELAY_%s, 内容: %s",
+    (uint64_t)stream_id,
+    (uint64_t)circ->n_circ_id,
+    relay_command_to_string(relay_command),
+    formatted_payload
+  );
 
   /* Add random padding to the cell if we can. */
   pad_cell_payload(cell.payload, payload_len);
@@ -1634,6 +1705,21 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
                      edge_connection_t *conn, crypt_path_t *layer_hint,
                      relay_header_t *rh, int optimistic_data)
 {
+  // ipid: 打个日志，此时 Relay Cell 的 Payload 已经解密了，输出收到的 Relay Cell 内容
+  if (rh->length <= CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE) {
+    char formatted_payload[512];
+    ipid_print_relay_cell_payload_friendly(
+      rh->command, cell->payload + RELAY_HEADER_SIZE, rh->length, formatted_payload, sizeof(formatted_payload));
+
+    log_notice(LD_GENERAL, 
+      "[ipid] 收到一个 Relay Cell: Stream ID = %"PRIu64", Circuit ID = %"PRIu64", 命令 = RELAY_%s, 内容: %s",
+      (uint64_t)rh->stream_id,
+      (uint64_t)circ->n_circ_id,
+      relay_command_to_string(rh->command),
+      formatted_payload
+    );
+  }
+
   unsigned domain = layer_hint?LD_APP:LD_EXIT;
   int reason;
 
